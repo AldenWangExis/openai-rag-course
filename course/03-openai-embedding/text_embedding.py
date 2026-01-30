@@ -31,10 +31,31 @@ from openai import OpenAI  # OpenAI官方SDK客户端
 import numpy as np  # numpy提供向量和矩阵运算，这里用于计算余弦相似度
 
 # 全局常量配置
-BASE_URL = "http://143.64.120.39:8695/v1"
-API_KEY = "<YOUR_API_KEY>"
-EMBEDDING_MODEL_NAME = "NNIT-Ada-3-large"
+from dotenv import load_dotenv
+import os
+load_dotenv()
+API_KEY = os.getenv("API_KEY")
+BASE_URL = os.getenv("BASE_URL")
+MODEL_NAME = os.getenv("MODEL_NAME")
+EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
+def get_text_embedding(text: str, client) -> np.ndarray:
 
+    print(f"\n正在向量化文本: {text}")
+    response = client.embeddings.create(
+            model=EMBEDDING_MODEL_NAME,
+            input=text
+        )
+    # print(f"\n文本的原始向量表示:\n {response}") #原始向量表示是一个长列表
+    embedding = np.array(response.data[0].embedding)  # 转换为numpy数组
+    print(f"向量维度: {embedding.shape}")
+    print(f"向量前10个值: {embedding[:10]}")
+    return embedding    
+def caculate_embedding_distance(embeddingA: np.ndarray, embeddingB: np.ndarray, text_a: str, text_b: str) -> float:
+    dot_product_a_b = np.dot(embeddingA, embeddingB)  # 向量点积：A·B
+    norm_A = np.linalg.norm(embeddingA)  # 向量1的模：||A||
+    norm_B = np.linalg.norm(embeddingB)  # 向量2的模：||B||
+    similarity_a_b = dot_product_a_b / (norm_A * norm_B)  # 余弦相似度：(A·B)/(||A||*||B||)
+    print(f"'{text_a}' vs '{text_b}': {similarity_a_b:.4f}")
 
 def main():
     # 创建OpenAI客户端实例
@@ -51,38 +72,11 @@ def main():
     print("=" * 60)
     print("步骤1：获取文本的向量表示")
     print("=" * 60)
+    embedding1 = get_text_embedding(text1, client)
+    embedding2 = get_text_embedding(text2, client)
+    embedding3 = get_text_embedding(text3, client)
     
-    # 获取文本1的向量
-    print(f"\n正在向量化文本1: {text1}")
-    response1 = client.embeddings.create(
-        model=EMBEDDING_MODEL_NAME,
-        input=text1
-    )
-    # print(f"\n文本1的原始向量表示:\n {response1}") #原始向量表示是一个长列表
-    embedding1 = np.array(response1.data[0].embedding)  # 转换为numpy数组
-    print(f"向量维度: {embedding1.shape}")
-    print(f"向量前10个值: {embedding1[:10]}")
-    
-    # 获取文本2的向量
-    print(f"\n正在向量化文本2: {text2}")
-    response2 = client.embeddings.create(
-        model=EMBEDDING_MODEL_NAME,
-        input=text2
-    )
-    embedding2 = np.array(response2.data[0].embedding)
-    print(f"向量维度: {embedding2.shape}")
-    print(f"向量前10个值: {embedding2[:10]}")
-    
-    # 获取文本3的向量
-    print(f"\n正在向量化文本3: {text3}")
-    response3 = client.embeddings.create(
-        model=EMBEDDING_MODEL_NAME,
-        input=text3
-    )
-    embedding3 = np.array(response3.data[0].embedding)
-    print(f"向量维度: {embedding3.shape}")
-    print(f"向量前10个值: {embedding3[:10]}")
-    
+
     print("\n" + "=" * 60)
     print("步骤2：计算向量之间的距离")
     print("=" * 60)
@@ -95,23 +89,9 @@ def main():
     # 计算文本1和文本2的余弦相似度
     # 余弦相似度即两个向量之间的夹角余弦值，值在[-1, 1]之间，越接近1表示距离越近（越相似）
     # 使用 numpy 的基础向量运算：点积（np.dot）和模长（np.linalg.norm）
-    dot_product_1_2 = np.dot(embedding1, embedding2)  # 向量点积：A·B
-    norm_1 = np.linalg.norm(embedding1)  # 向量1的模：||A||
-    norm_2 = np.linalg.norm(embedding2)  # 向量2的模：||B||
-    similarity_1_2 = dot_product_1_2 / (norm_1 * norm_2)  # 余弦相似度：(A·B)/(||A||*||B||)
-    print(f"'{text1}' vs '{text2}': {similarity_1_2:.4f}")
-    
-    # 计算文本1和文本3的余弦相似度
-    dot_product_1_3 = np.dot(embedding1, embedding3)
-    norm_3 = np.linalg.norm(embedding3)
-    similarity_1_3 = dot_product_1_3 / (norm_1 * norm_3)
-    print(f"'{text1}' vs '{text3}': {similarity_1_3:.4f}")
-    
-    # 计算文本2和文本3的余弦相似度
-    dot_product_2_3 = np.dot(embedding2, embedding3)
-    similarity_2_3 = dot_product_2_3 / (norm_2 * norm_3)
-    print(f"'{text2}' vs '{text3}': {similarity_2_3:.4f}")
-    
+    caculate_embedding_distance(embedding1, embedding2, text1, text2)
+    caculate_embedding_distance(embedding1, embedding3, text1, text3)
+    caculate_embedding_distance(embedding2, embedding3, text2, text3)
     print("\n" + "=" * 60)
     print("结论")
     print("=" * 60)
