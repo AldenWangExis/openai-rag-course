@@ -27,16 +27,27 @@
     python text_embedding.py
 """
 
-from openai import OpenAI  # OpenAI官方SDK客户端
-import numpy as np  # numpy提供向量和矩阵运算，这里用于计算余弦相似度
-
-# 全局常量配置
-from dotenv import load_dotenv
+from openai import OpenAI
+import numpy as np
 import os
-load_dotenv()
-API_KEY = os.getenv("API_KEY")
+from dotenv import load_dotenv
+
+def load_root_env():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    while True:
+        env_file = os.path.join(current_dir, ".env")
+        if os.path.exists(env_file):
+            load_dotenv(dotenv_path=env_file)
+            return
+        parent_dir = os.path.dirname(current_dir)
+        if parent_dir == current_dir:
+            raise FileNotFoundError("未在仓库根目录找到.env文件，请检查是否放在根目录！")
+        current_dir = parent_dir
+
+load_root_env()
+
 BASE_URL = os.getenv("BASE_URL")
-MODEL_NAME = os.getenv("MODEL_NAME")
+API_KEY = os.getenv("API_KEY")
 EMBEDDING_MODEL_NAME = os.getenv("EMBEDDING_MODEL_NAME")
 def get_text_embedding(text: str, client) -> np.ndarray:
 
